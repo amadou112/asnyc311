@@ -1,0 +1,43 @@
+# NYC 311 AI Management Platform — full stack.
+#
+# Reuses the existing 311 pipeline's Postgres by joining its Docker network
+# (external: localdatapipelinedashboard_default). No new database is created; the
+# platform lives in the `platform` schema alongside the pipeline's `curated` data.
+
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    environment:
+      # inside the pipeline network the DB is reachable as service `postgres:5432`
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      CORS_ORIGINS: http://localhost:3007,http://127.0.0.1:3007,http://localhost:3000
+    ports:
+      - "8008:8000"
+    networks:
+      - app_net
+      - pipeline_net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # NEXT_PUBLIC_* are inlined at build time, so pass as a build arg
+        NEXT_PUBLIC_API_BASE: http://localhost:8008/api/v1
+    environment:
+      NEXT_PUBLIC_API_BASE: http://localhost:8008/api/v1
+    ports:
+      - "3007:3000"
+    depends_on:
+      - backend
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    driver: bridge
+  pipeline_net:
+    external: true
+    name: localdatapipelinedashboard_default
