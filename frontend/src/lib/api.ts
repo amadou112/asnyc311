@@ -16,9 +16,13 @@ import type {
   TrendPoint,
   User,
 } from "./types";
+import { demoApi } from "./demo-api";
 
-const BASE =
-  process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8008/api/v1";
+// When no backend URL is configured (e.g. the Vercel deploy), fall back to the
+// bundled self-contained demo dataset so the site works standalone.
+const RAW_BASE = process.env.NEXT_PUBLIC_API_BASE;
+const DEMO = !RAW_BASE;
+const BASE = RAW_BASE ?? "http://localhost:8008/api/v1";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { cache: "no-store" });
@@ -36,7 +40,7 @@ async function send<T>(path: string, method: string, body?: unknown): Promise<T>
   return res.json();
 }
 
-export const api = {
+const liveApi = {
   base: BASE,
   health: () => get<{ status: string; ai_provider: string; database: string }>("/health"),
 
@@ -91,3 +95,5 @@ export const api = {
   reports: () => get<Report[]>("/reports"),
   generateReport: (kind = "executive") => send<Report>("/reports/generate", "POST", { kind }),
 };
+
+export const api = (DEMO ? demoApi : liveApi) as typeof liveApi;
